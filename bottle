@@ -172,7 +172,17 @@ def sort_bottles(bottles):
 
 # LIST COMMAND
 def list_bottles(bottles, bottle_type):
-    if len(bottles) == 0:
+    if bottle_type == "all":
+        filtered_bottles = bottles
+    elif bottle_type == "opened":
+        filtered_bottles = [bottle for bottle in bottles if bottle.opened]
+    elif bottle_type == "unopened":
+        filtered_bottles = [bottle for bottle in bottles if not bottle.opened]
+    elif bottle_type == "ready":
+        filtered_bottles = [bottle for bottle in bottles if bottle.is_ready()]
+    elif bottle_type == "future":
+        filtered_bottles = [bottle for bottle in bottles if not bottle.is_ready()]
+    if len(filtered_bottles) == 0:
         print(f"No {f"{bottle_type} " if bottle_type != "all" else ""}bottles stored")
         return
     longest_name = -1
@@ -184,13 +194,22 @@ def list_bottles(bottles, bottle_type):
     print("   " + "-" * (longest_name + 2) + "|" + "-" * 12)
     for i in range(len(bottles)):
         bottle = bottles[i]
-        space = " " * (longest_name - len(bottle.name))
+        if bottle_type == "opened" and not bottle.opened:
+            continue
+        elif bottle_type == "unopened" and bottle.opened:
+            continue
+        elif bottle_type == "ready" and not bottle.is_ready():
+            continue
+        elif bottle_type == "future" and bottle.is_ready():
+            continue
+        start_space  = " " * (len(str(len(bottles))) - len(str(i+1)))
+        middle_space = " " * (longest_name - len(bottle.name))
         if bottle.opened:
-            print(f"\033[90m[{i+1}] {bottle.name}{space}\033[0m | \033[90m{bottle.date} [opened]\033[0m")
+            print(f"\033[90m[{i+1}] {start_space}{bottle.name}{middle_space}\033[0m | \033[90m{bottle.date} [opened]\033[0m")
         elif bottle.is_ready():
-            print(f"\033[95m[{i+1}] {bottle.name}{space}\033[0m | \033[95m{bottle.date} [ready]\033[0m")
+            print(f"\033[95m[{i+1}] {start_space}{bottle.name}{middle_space}\033[0m | \033[95m{bottle.date} [ready]\033[0m")
         else:
-            print(f"[{i+1}] {bottle.name}{space} | {bottle.date}")
+            print(f"[{i+1}] {start_space}{bottle.name}{middle_space} | {bottle.date}")
 
 # OPEN COMMAND
 def open_bottle(bottle):
@@ -255,7 +274,7 @@ def main():
     smash_parser.add_argument("number", type=int, help="bottle number to smash")
     args = parser.parse_args()
 
-    bottles_filename = os.path.expanduser("~/.bottle/Bottles.json")
+    bottles_filename = os.path.expanduser("~/.bottle/bottles.json")
     bottles = sort_bottles(load_bottles(bottles_filename))
 
     if args.command == "create":
@@ -264,16 +283,7 @@ def main():
         store_bottles(bottles, bottles_filename)
 
     elif args.command == "list":
-        if args.type == "all":
-            list_bottles(bottles, args.type)
-        elif args.type == "ready":
-            list_bottles([bottle for bottle in bottles if bottle.is_ready()], args.type)
-        elif args.type == "future":
-            list_bottles([bottle for bottle in bottles if not bottle.is_ready()], args.type)
-        elif args.type == "opened":
-            list_bottles([bottle for bottle in bottles if bottle.opened], args.type)
-        elif args.type == "unopened":
-            list_bottles([bottle for bottle in bottles if not bottle.opened], args.type)
+        list_bottles(bottles, args.type)
 
     elif args.command == "open":
         if args.number > 0 and args.number <= len(bottles):
