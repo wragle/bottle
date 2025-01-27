@@ -1,0 +1,288 @@
+#!/usr/bin/env python3
+
+import argparse
+from datetime import datetime
+import os
+import subprocess
+import tempfile
+import json
+import base64
+
+class Bottle():
+    def __init__(self, name: str, date: str, message: str, opened: bool, created: str):
+        self.name = name
+        self.date = date
+        self.message = message
+        self.opened = opened
+        self.created = created
+
+    def open(self):
+        bottle_created = datetime.strptime(self.created, "%d.%m.%Y")
+        current_date = datetime.now()
+        if self.is_ready():
+            days_ago = current_date - bottle_created
+            day_str = "day" if days_ago.days == 1 else "days"
+            day_with_suffix = ordinal(bottle_created.day)
+            print(f"\'{self.name}\' was created {days_ago.days} {day_str} ago on the {day_with_suffix} of {bottle_created.strftime("%B, %Y")}\nThe message stored inside reads:\n")
+            print(decrypt(self.message) + "\n")
+            self.opened = True
+        else:
+            print("This bottle is not meant to be opened yet.")
+
+    def is_ready(self):
+        current_date = datetime.now()
+        bottle_date = datetime.strptime(self.date, "%d.%m.%Y")
+        return current_date >= bottle_date
+
+    def to_dict(self):
+        return {
+                "name"   : self.name,
+                "date"   : self.date,
+                "message": self.message,
+                "opened" : self.opened,
+                "created": self.created
+         }
+
+    @staticmethod
+    def from_dict(data):
+        return Bottle(
+                name    = data["name"],
+                date    = data["date"],
+                message = data["message"],
+                opened  = data["opened"],
+                created = data["created"]
+        )
+
+def store_bottles(bottles, filename):
+    data = [bottle.to_dict() for bottle in bottles]
+    with open(filename, 'w') as file:
+        json.dump(data, file, indent=4)
+
+def load_bottles(filename):
+    try:
+        with open(filename, 'r') as file:
+            data = json.load(file)
+        return [Bottle.from_dict(item) for item in data]
+    except FileNotFoundError:
+        return []
+
+def ordinal(n):
+    if 10 <= n % 100 <= 20:
+        suffix = 'th'
+    else:
+        suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+    return str(n) + suffix
+
+def validate_date(date_string: str) -> tuple[bool, str, str]:
+    """
+    Validates a date string in format dd.mm.yyyy or d.m.yyyy
+    Returns (is_valid, message, formatted_date)
+    formatted_date will include leading zeros
+    """
+    # Check basic format
+    parts = date_string.split('.')
+    if len(parts) != 3:
+        return False, "Date must be in format dd.mm.yyyy or d.m.yyyy", ""
+
+    try:
+        day, month, year = parts
+
+        # Check year
+        if len(year) != 4 or not year.isdigit():
+            return False, "Year must be 4 digits", ""
+
+        # Check day and month are numbers
+        if not day.isdigit() or not month.isdigit():
+            return False, "Day and month must be numbers", ""
+
+        # Convert to integers
+        day_int = int(day)
+        month_int = int(month)
+        year_int = int(year)
+
+        # Check ranges
+        if not (1 <= month_int <= 12):
+            return False, "Month must be between 1 and 12", ""
+
+        if not (1 <= day_int <= 31):
+            return False, "Day must be between 1 and 31", ""
+
+        # Try to create a datetime object to validate the date
+        # This will catch invalid dates like 31.04.2024 (April has 30 days)
+        datetime(year_int, month_int, day_int)
+
+        # Format with leading zeros
+        formatted_date = f"{day_int:02d}.{month_int:02d}.{year_int}"
+
+        return True, "Valid date", formatted_date
+
+    except ValueError as e:
+        return False, f"Invalid date: {str(e)}", ""
+
+
+def encrypt(message: str) -> str:
+    message_bytes = message.encode()
+    key_bytes = ENCRYPTION_KEY.encode() * (len(message_bytes) // len(ENCRYPTION_KEY) + 1)
+    key_bytes = key_bytes[:len(message_bytes)]
+    encrypted_bytes = bytes(a ^ b for a, b in zip(message_bytes, key_bytes))
+    return base64.b64encode(encrypted_bytes).decode()
+
+def decrypt(encrypted_message: str) -> str:
+    encrypted_bytes = base64.b64decode(encrypted_message.encode())
+    key_bytes = ENCRYPTION_KEY.encode() * (len(encrypted_bytes) // len(ENCRYPTION_KEY) + 1)
+    key_bytes = key_bytes[:len(encrypted_bytes)]
+    decrypted_bytes = bytes(a ^ b for a, b in zip(encrypted_bytes, key_bytes))
+    return decrypted_bytes.decode()
+
+def vim_input():
+    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as temp:
+        temp_path = temp.name
+    try:
+        subprocess.call(["vim", "+startinsert", temp_path])
+        with open(temp_path, 'r') as file:
+            message = file.read()
+        os.unlink(temp_path)
+        return message.strip()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+        return ""
+
+def sort_by_date(bottles):
+    def date_key(bottle):
+        day, month, year = map(int, bottle.date.split('.'))
+        return (year, month, day)
+    return sorted(bottles, key=date_key)
+
+def sort_bottles(bottles):
+    ready_bottles = []
+    notready_bottles = []
+    opened_bottles = []
+    for bottle in bottles: 
+        if bottle.opened:
+            opened_bottles.append(bottle)
+        elif bottle.is_ready():
+            ready_bottles.append(bottle)
+        else:
+            notready_bottles.append(bottle)
+    sorted_bottles = sort_by_date(ready_bottles) + sort_by_date(notready_bottles) + sort_by_date(opened_bottles)
+    return sorted_bottles
+
+
+# LIST COMMAND
+def list_bottles(bottles):
+    if len(bottles) == 0:
+        print("No bottles stored")
+        return
+    longest_name = -1
+    for bottle in bottles:
+        if len(bottle.name) > longest_name:
+            longest_name = len(bottle.name)
+    space = " " * (longest_name - 3)
+    print("    " + "Bottle" + space + "Open Date")
+    print("   " + "-" * (longest_name + 2) + "|" + "-" * 12)
+    for i in range(len(bottles)):
+        bottle = bottles[i]
+        space = " " * (longest_name - len(bottle.name))
+        if bottle.opened:
+            print(f"[\033[90m{i+1}] {bottle.name}{space} | {bottle.date} [opened]\033[0m")
+        elif bottle.is_ready():
+            print(f"\033[92m[{i+1}] {bottle.name}{space} | {bottle.date} [ready]\033[0m")
+        else:
+            print(f"[{i+1}] {bottle.name}{space} | {bottle.date}")
+
+# OPEN COMMAND
+def open_bottle(bottle):
+    bottle.open()
+
+# SMASH COMMAND
+def smash_bottle(bottles, bottle):
+    while True:
+        confirmation = input(f"Are sure you want to smash \'{bottle.name}\'? [y/n] ")
+        if confirmation.lower() == "y":
+            name_input = input("Enter the name of the bottle:\n")
+            if name_input == bottle.name:
+                bottles.remove(bottle)
+                print("Bottle smashed")
+            break
+        elif confirmation.lower() == "n":
+            break
+    return bottles
+    
+# CREATE COMMAND
+def create_bottle():
+
+    # ask for bottle name
+    max_length = 30
+    while True:
+        name = input("What will you call this bottle? ")
+        if len(name) > 0 and len(name) <= max_length:
+            break        
+        print(f"Name must be between 1 and {max_length} characters")
+
+    # ask for bottle date
+    while True:       
+        date = input("What date should this bottle be opened? ")
+        validate = validate_date(date)
+        if validate[0]: #check if valid!
+            date = validate[2]
+            break
+        else:
+            print(validate[1])
+
+    # gets bottle message
+    message = vim_input()
+    encrypted_message = encrypt(message)
+
+    # created date
+    created = datetime.now().strftime("%d.%m.%Y") 
+
+    print("Bottle created")
+
+    return Bottle(name, date, encrypted_message, False, created)
+
+def main():
+    parser = argparse.ArgumentParser(description="Message in a Bottle")
+    subparsers = parser.add_subparsers(dest="command", help="commands")
+
+    create_parser = subparsers.add_parser("create", help="create a new bottle")
+    list_parser = subparsers.add_parser("list", help="list bottles")
+    open_parser = subparsers.add_parser("open", help="open a bottle")
+    open_parser.add_argument("number", type=int, help="bottle number to open")
+    smash_parser = subparsers.add_parser("smash", help="smash a bottle")
+    smash_parser.add_argument("number", type=int, help="bottle number to smash")
+    args = parser.parse_args()
+
+    bottles_filename = os.path.expanduser("~/.bottle/bottles.json")
+    bottles = sort_bottles(load_bottles(bottles_filename))
+    if args.command == "create":
+        bottle = create_bottle()
+        bottles.append(bottle)
+        store_bottles(bottles, bottles_filename)
+    elif args.command == "list":
+        list_bottles(bottles)
+    elif args.command == "open":
+        if args.number > 0 and args.number <= len(bottles):
+            open_bottle(bottles[args.number - 1])
+            store_bottles(bottles, bottles_filename)
+        else:
+            print(f"Bottle {args.number} not found")
+    elif args.command == "smash":
+        if args.number > 0 and args.number <= len(bottles):
+            bottles = smash_bottle(bottles, bottles[args.number - 1])
+            store_bottles(bottles, bottles_filename)
+        else:
+            print(f"Bottle {args.number} not found")
+    else:
+        parser.print_help()
+
+ENCRYPTION_KEY = "bottle"
+
+if __name__ == "__main__":
+    main()
+
+
+# good start on the code
+# need to neaten up the LIST command
+# list screen should show ready bottles and order by opened/unopened and then by date . and colour code stuff
