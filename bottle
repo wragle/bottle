@@ -171,9 +171,9 @@ def sort_bottles(bottles):
 
 
 # LIST COMMAND
-def list_bottles(bottles):
+def list_bottles(bottles, bottle_type):
     if len(bottles) == 0:
-        print("No bottles stored")
+        print(f"No {f"{bottle_type} " if bottle_type != "all" else ""}bottles stored")
         return
     longest_name = -1
     for bottle in bottles:
@@ -186,9 +186,9 @@ def list_bottles(bottles):
         bottle = bottles[i]
         space = " " * (longest_name - len(bottle.name))
         if bottle.opened:
-            print(f"[\033[90m{i+1}] {bottle.name}{space} | {bottle.date} [opened]\033[0m")
+            print(f"\033[90m[{i+1}] {bottle.name}{space}\033[0m | \033[90m{bottle.date} [opened]\033[0m")
         elif bottle.is_ready():
-            print(f"\033[92m[{i+1}] {bottle.name}{space} | {bottle.date} [ready]\033[0m")
+            print(f"\033[95m[{i+1}] {bottle.name}{space}\033[0m | \033[95m{bottle.date} [ready]\033[0m")
         else:
             print(f"[{i+1}] {bottle.name}{space} | {bottle.date}")
 
@@ -248,32 +248,47 @@ def main():
 
     create_parser = subparsers.add_parser("create", help="create a new bottle")
     list_parser = subparsers.add_parser("list", help="list bottles")
+    list_parser.add_argument("type", nargs="?", default="ready", choices=["all", "ready", "future", "opened", "unopened"], help="type of bottles to list")
     open_parser = subparsers.add_parser("open", help="open a bottle")
     open_parser.add_argument("number", type=int, help="bottle number to open")
     smash_parser = subparsers.add_parser("smash", help="smash a bottle")
     smash_parser.add_argument("number", type=int, help="bottle number to smash")
     args = parser.parse_args()
 
-    bottles_filename = os.path.expanduser("~/.bottle/bottles.json")
+    bottles_filename = os.path.expanduser("~/.bottle/Bottles.json")
     bottles = sort_bottles(load_bottles(bottles_filename))
+
     if args.command == "create":
         bottle = create_bottle()
         bottles.append(bottle)
         store_bottles(bottles, bottles_filename)
+
     elif args.command == "list":
-        list_bottles(bottles)
+        if args.type == "all":
+            list_bottles(bottles, args.type)
+        elif args.type == "ready":
+            list_bottles([bottle for bottle in bottles if bottle.is_ready()], args.type)
+        elif args.type == "future":
+            list_bottles([bottle for bottle in bottles if not bottle.is_ready()], args.type)
+        elif args.type == "opened":
+            list_bottles([bottle for bottle in bottles if bottle.opened], args.type)
+        elif args.type == "unopened":
+            list_bottles([bottle for bottle in bottles if not bottle.opened], args.type)
+
     elif args.command == "open":
         if args.number > 0 and args.number <= len(bottles):
             open_bottle(bottles[args.number - 1])
             store_bottles(bottles, bottles_filename)
         else:
             print(f"Bottle {args.number} not found")
+
     elif args.command == "smash":
         if args.number > 0 and args.number <= len(bottles):
             bottles = smash_bottle(bottles, bottles[args.number - 1])
             store_bottles(bottles, bottles_filename)
         else:
             print(f"Bottle {args.number} not found")
+
     else:
         parser.print_help()
 
