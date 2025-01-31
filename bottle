@@ -170,19 +170,28 @@ def sort_bottles(bottles):
     sorted_bottles = sort_by_date(ready_bottles) + sort_by_date(notready_bottles) + sort_by_date(opened_bottles)
     return sorted_bottles
 
+def filter_bottles(bottles, bottle_type):
+    if bottle_type == "all":
+        return bottles
+    elif bottle_type == "opened":
+        return [bottle for bottle in bottles if bottle.opened]
+    elif bottle_type == "unopened":
+        return [bottle for bottle in bottles if not bottle.opened]
+    elif bottle_type == "ready":
+        return [bottle for bottle in bottles if bottle.is_ready()]
+    elif bottle_type == "unready":
+        return [bottle for bottle in bottles if not bottle.is_ready()]
+    else:
+        return []
+
+# COUNT COMMAND
+def count_bottles(bottles, bottle_type):
+    filtered_bottles = filter_bottles(bottles, bottle_type)
+    return len(filtered_bottles)
 
 # LIST COMMAND
 def list_bottles(bottles, bottle_type):
-    if bottle_type == "all":
-        filtered_bottles = bottles
-    elif bottle_type == "opened":
-        filtered_bottles = [bottle for bottle in bottles if bottle.opened]
-    elif bottle_type == "unopened":
-        filtered_bottles = [bottle for bottle in bottles if not bottle.opened]
-    elif bottle_type == "ready":
-        filtered_bottles = [bottle for bottle in bottles if bottle.is_ready()]
-    elif bottle_type == "future":
-        filtered_bottles = [bottle for bottle in bottles if not bottle.is_ready()]
+    filtered_bottles = filter_bottles(bottles, bottle_type)
     if len(filtered_bottles) == 0:
         print(f"No {f"{bottle_type} " if bottle_type != "all" else ""}bottles stored")
         return
@@ -201,7 +210,7 @@ def list_bottles(bottles, bottle_type):
             continue
         elif bottle_type == "ready" and not bottle.is_ready():
             continue
-        elif bottle_type == "future" and bottle.is_ready():
+        elif bottle_type == "unready" and bottle.is_ready():
             continue
         start_space  = " " * (len(str(len(bottles))) - len(str(i+1)))
         middle_space = " " * (longest_name - len(bottle.name))
@@ -273,11 +282,13 @@ def main():
         subparsers = parser.add_subparsers(dest="command", help="commands")
 
         create_parser = subparsers.add_parser("create", help="create a new bottle")
-        list_parser = subparsers.add_parser("list", help="list bottles")
-        list_parser.add_argument("type", nargs="?", default="ready", choices=["all", "ready", "future", "opened", "unopened"], help="type of bottles to list")
-        open_parser = subparsers.add_parser("open", help="open a bottle")
+        count_parser  = subparsers.add_parser("count", help="counts bottles of a given type")
+        count_parser.add_argument("type", choices=BOTTLE_TYPES, help="type of bottles to count")
+        list_parser   = subparsers.add_parser("list", help="lists bottles of a given type")
+        list_parser.add_argument("type", nargs="?", default="ready", choices=BOTTLE_TYPES, help="type of bottles to list")
+        open_parser   = subparsers.add_parser("open", help="open a bottle")
         open_parser.add_argument("number", type=int, help="bottle number to open")
-        smash_parser = subparsers.add_parser("smash", help="smash a bottle")
+        smash_parser  = subparsers.add_parser("smash", help="smash a bottle")
         smash_parser.add_argument("number", type=int, help="bottle number to smash")
         args = parser.parse_args()
 
@@ -288,6 +299,9 @@ def main():
             bottle = create_bottle()
             bottles.append(bottle)
             store_bottles(bottles, bottles_filename)
+
+        elif args.command == "count":
+            print(count_bottles(bottles, args.type)) # should i be returning this instead? or stdout?
 
         elif args.command == "list":
             list_bottles(bottles, args.type)
@@ -313,6 +327,7 @@ def main():
 
 ENCRYPTION_KEY = "bottle"
 COMMANDS = ["create", "list", "open", "smash"]
+BOTTLE_TYPES = ["all", "ready", "unready", "opened", "unopened"]
 
 if __name__ == "__main__":
     main()
