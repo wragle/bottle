@@ -215,9 +215,9 @@ def list_bottles(bottles, bottle_type):
         start_space  = " " * (len(str(len(bottles))) - len(str(i+1)))
         middle_space = " " * (longest_name - len(bottle.name))
         if bottle.opened:
-            print(f"\033[90m[{i+1}] {start_space}{bottle.name}{middle_space}\033[0m | \033[90m{bottle.date} [opened]\033[0m")
+            print(f"{GREY}[{i+1}] {start_space}{bottle.name}{middle_space}{DEFAULT} | {GREY}{bottle.date} [opened]{DEFAULT}")
         elif bottle.is_ready():
-            print(f"\033[95m[{i+1}] {start_space}{bottle.name}{middle_space}\033[0m | \033[95m{bottle.date} [ready]\033[0m")
+            print(f"{BOLD}{COLOUR}[{i+1}] {start_space}{bottle.name}{middle_space}{DEFAULT} | {BOLD}{COLOUR}{bottle.date} [ready]{DEFAULT}")
         else:
             print(f"[{i+1}] {start_space}{bottle.name}{middle_space} | {bottle.date}")
 
@@ -328,6 +328,10 @@ def main():
 ENCRYPTION_KEY = "bottle"
 COMMANDS = ["create", "list", "open", "smash"]
 BOTTLE_TYPES = ["all", "ready", "unready", "opened", "unopened"]
+COLOUR = "\033[95m"
+GREY = "\033[90m"
+BOLD = "\033[1m"
+DEFAULT = "\033[0m"
 
 if __name__ == "__main__":
     main()
