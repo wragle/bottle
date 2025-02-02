@@ -332,13 +332,3 @@ BOTTLE_TYPES = ["all", "ready", "unready", "opened", "unopened"]
 if __name__ == "__main__":
     main()
 
-
-# TODO
-# maybe add a command 'check'/'count' that returns an integer of the amount of
-# bottles stored of a certain type
-# could even return that to standard out? so then in another script
-# i can check to see if there are ready bottles and give notification if it
-# is the case. 
-# that will require me to learn how notifications really work, because
-# ideally i want the notification to be persistent
-# add tab complete for commands???
