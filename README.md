@@ -1,10 +1,10 @@
-* Message in a Bottle
+# Message in a Bottle
 A command-line based program that stores messages to be accessed at a later date
 
-** Installation
+## Installation
 Copy bottle.py into a directory which is part of your system PATH. The bottles will be stored in `$HOME/.local/share/bottle/bottles.json` by default. Changing the `BOTTLES_DIRECTORY` in bottle.py will change where they are stored and read from.
 
-** Usage
+## Usage
 Access the help menu
 ```bash
 bottle --help
