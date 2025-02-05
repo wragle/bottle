@@ -13,9 +13,13 @@ Create a new bottle
 ```bash
 bottle create
 ```
-List bottles
+List ready bottles
 ```bash
 bottle list
+```
+List bottles of a specific type
+```bash
+bottle list [BOTTLE TYPE]
 ```
 Smash (destroy) a bottle
 ```bash
