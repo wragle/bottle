@@ -4,6 +4,7 @@ import argparse
 import readline
 from datetime import datetime
 import os
+from pathlib import Path
 import subprocess
 import tempfile
 import json
@@ -56,12 +57,12 @@ class Bottle():
 
 def store_bottles(bottles, filename):
     data = [bottle.to_dict() for bottle in bottles]
-    with open(filename, 'w') as file:
+    with filename.open('w') as file:
         json.dump(data, file, indent=4)
 
 def load_bottles(filename):
     try:
-        with open(filename, 'r') as file:
+        with filename.open('r') as file:
             data = json.load(file)
         return [Bottle.from_dict(item) for item in data]
     except FileNotFoundError:
@@ -135,11 +136,15 @@ def decrypt(encrypted_message: str) -> str:
     decrypted_bytes = bytes(a ^ b for a, b in zip(encrypted_bytes, key_bytes))
     return decrypted_bytes.decode()
 
-def vim_input():
+def take_input():
     with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as temp:
         temp_path = temp.name
     try:
-        subprocess.call(["vim", "+startinsert", temp_path])
+        editor = os.getenv('EDITOR', 'nano')
+        if editor == 'vim':
+            subprocess.call(["vim", "+startinsert", temp_path])
+        else:
+            subprocess.call([editor, temp_path])
         with open(temp_path, 'r') as file:
             message = file.read()
         os.unlink(temp_path)
@@ -245,14 +250,14 @@ def create_bottle():
     # ask for bottle name
     max_length = 30
     while True:
-        name = input("What will you call this bottle? ")
+        name = input("What will you call this bottle?\n")
         if len(name) > 0 and len(name) <= max_length:
             break        
         print(f"Name must be between 1 and {max_length} characters")
 
     # ask for bottle date
     while True:       
-        date = input("What date should this bottle be opened? ")
+        date = input("What date should this bottle be opened? [dd.mm.yyyy]\n")
         validate = validate_date(date)
         if validate[0]: #check if valid!
             date = validate[2]
@@ -261,7 +266,7 @@ def create_bottle():
             print(validate[1])
 
     # gets bottle message
-    message = vim_input()
+    message = take_input()
     encrypted_message = encrypt(message)
 
     # created date
@@ -278,9 +283,7 @@ def completer(text, state):
 def main():
     try:
         parser = argparse.ArgumentParser(description="Message in a Bottle")
-        #parser.add_argument("command", choices=COMMANDS, help="command to run")
         subparsers = parser.add_subparsers(dest="command", help="commands")
-
         create_parser = subparsers.add_parser("create", help="create a new bottle")
         count_parser  = subparsers.add_parser("count", help="counts bottles of a given type")
         count_parser.add_argument("type", choices=BOTTLE_TYPES, help="type of bottles to count")
@@ -288,17 +291,21 @@ def main():
         list_parser.add_argument("type", nargs="?", default="ready", choices=BOTTLE_TYPES, help="type of bottles to list")
         open_parser   = subparsers.add_parser("open", help="open a bottle")
         open_parser.add_argument("number", type=int, help="bottle number to open")
-        smash_parser  = subparsers.add_parser("smash", help="smash a bottle")
+        smash_parser  = subparsers.add_parser("smash", help="destroy a bottle")
         smash_parser.add_argument("number", type=int, help="bottle number to smash")
         args = parser.parse_args()
-
-        bottles_filename = os.path.expanduser("~/.bottle/bottles.json")
-        bottles = sort_bottles(load_bottles(bottles_filename))
+        
+        # creates bottles directory if it doesn't exist
+        BOTTLES_DIR.mkdir(parents=True, exist_ok=True)
+        if BOTTLES_FILE.exists():
+            bottles = sort_bottles(load_bottles(BOTTLES_FILE))
+        else:
+            bottles = []
 
         if args.command == "create":
             bottle = create_bottle()
             bottles.append(bottle)
-            store_bottles(bottles, bottles_filename)
+            store_bottles(bottles, BOTTLES_FILE)
 
         elif args.command == "count":
             print(count_bottles(bottles, args.type)) # should i be returning this instead? or stdout?
@@ -309,14 +316,14 @@ def main():
         elif args.command == "open":
             if args.number > 0 and args.number <= len(bottles):
                 open_bottle(bottles[args.number - 1])
-                store_bottles(bottles, bottles_filename)
+                store_bottles(bottles, BOTTLES_FILE)
             else:
                 print(f"Bottle {args.number} not found")
 
         elif args.command == "smash":
             if args.number > 0 and args.number <= len(bottles):
                 bottles = smash_bottle(bottles, bottles[args.number - 1])
-                store_bottles(bottles, bottles_filename)
+                store_bottles(bottles, BOTTLES_FILE)
             else:
                 print(f"Bottle {args.number} not found")
 
@@ -328,17 +335,12 @@ def main():
 ENCRYPTION_KEY = "bottle"
 COMMANDS = ["create", "list", "open", "smash"]
 BOTTLE_TYPES = ["all", "ready", "unready", "opened", "unopened"]
-COLOUR = "\033[95m"
-GREY = "\033[90m"
-BOLD = "\033[1m"
+BOTTLES_DIR  = Path.home() / ".local" / "share" / "bottle"
+BOTTLES_FILE = BOTTLES_DIR / "bottles.json"
+COLOUR  = "\033[95m"
+GREY    = "\033[90m"
+BOLD    = "\033[1m"
 DEFAULT = "\033[0m"
 
 if __name__ == "__main__":
     main()
-
-# TODO
-# store bottles.json in $HOME/.bottles.json or actually probably store in /var/lib or something?
-# STORE IN $HOME/.local/share/bottle/bottles.json
-# find out where most software stores their data
-# also make installation script that is portable and copies the binary to /usr/bin i think
-# basically make this a fully functioning program that anyone can use
