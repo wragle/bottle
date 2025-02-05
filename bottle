@@ -336,3 +336,9 @@ DEFAULT = "\033[0m"
 if __name__ == "__main__":
     main()
 
+# TODO
+# store bottles.json in $HOME/.bottles.json or actually probably store in /var/lib or something?
+# STORE IN $HOME/.local/share/bottle/bottles.json
+# find out where most software stores their data
+# also make installation script that is portable and copies the binary to /usr/bin i think
+# basically make this a fully functioning program that anyone can use
