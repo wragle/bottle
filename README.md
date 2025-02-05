@@ -5,27 +5,27 @@ A command-line based program that stores messages to be accessed at a later date
 Copy bottle.py into a directory which is part of your system PATH. The bottles will be stored in `$HOME/.local/share/bottle/bottles.json` by default. Changing the `BOTTLES_DIRECTORY` variable in bottle.py will change where they are stored and read from.
 
 ## Usage
-Access the help menu
+Access the help menu:
 ```bash
 bottle --help
 ```
-Create a new bottle
+Create a new bottle:
 ```bash
 bottle create
 ```
-List ready bottles
+List ready bottles:
 ```bash
 bottle list
 ```
-List bottles of a specific type
+List bottles of a specific type:
 ```bash
 bottle list [BOTTLE TYPE]
 ```
-Smash (destroy) a bottle
+Smash (destroy) a bottle:
 ```bash
 bottle smash [BOTTLE NUMBER]
 ```
-Count bottles of a specific type
+Count bottles of a specific type:
 ```bash
 bottle count [BOTTLE TYPE]
 ```
