@@ -24,7 +24,8 @@ class Bottle():
             days_ago = current_date - bottle_created
             day_str = "day" if days_ago.days == 1 else "days"
             day_with_suffix = ordinal(bottle_created.day)
-            print(f"\'{self.name}\' was created {days_ago.days} {day_str} ago on the {day_with_suffix} of {bottle_created.strftime("%B, %Y")}\nThe message stored inside reads:\n")
+            created_string = bottle_created.strftime("%B, %Y")
+            print(f"\'{self.name}\' was created {days_ago.days} {day_str} ago on the {day_with_suffix} of {created_string}\nThe message stored inside reads:\n")
             print(decrypt(self.message) + "\n")
             self.opened = True
         else:
@@ -197,7 +198,7 @@ def count_bottles(bottles, bottle_type):
 def list_bottles(bottles, bottle_type):
     filtered_bottles = filter_bottles(bottles, bottle_type)
     if len(filtered_bottles) == 0:
-        print(f"No {f"{bottle_type} " if bottle_type != "all" else ""}bottles stored")
+        print("No {}bottles stored".format(f"{bottle_type} " if bottle_type != "all" else ""))
         return
     longest_name = -1
     for bottle in bottles:
