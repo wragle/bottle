@@ -186,9 +186,10 @@ def filter_bottles(bottles, bottle_type):
         return [bottle for bottle in bottles if bottle.is_ready()]
     elif bottle_type == "unready":
         return [bottle for bottle in bottles if not bottle.is_ready()]
+    elif bottle_type == "new":
+        return [bottle for bottle in bottles if bottle.is_ready() and not bottle.opened]
     else:
         return []
-
 # COUNT COMMAND
 def count_bottles(bottles, bottle_type):
     filtered_bottles = filter_bottles(bottles, bottle_type)
@@ -216,6 +217,8 @@ def list_bottles(bottles, bottle_type):
         elif bottle_type == "ready" and not bottle.is_ready():
             continue
         elif bottle_type == "unready" and bottle.is_ready():
+            continue
+        elif bottle_type == "new" and (not bottle.is_ready() or bottle.opened):
             continue
         start_space  = " " * (len(str(len(bottles))) - len(str(i+1)))
         middle_space = " " * (longest_name - len(bottle.name))
@@ -334,7 +337,7 @@ def main():
 
 ENCRYPTION_KEY = "bottle"
 COMMANDS = ["create", "list", "open", "smash"]
-BOTTLE_TYPES = ["all", "ready", "unready", "opened", "unopened"]
+BOTTLE_TYPES = ["all", "ready", "unready", "opened", "unopened", "new"]
 BOTTLES_DIR  = Path.home() / ".local" / "share" / "bottle"
 BOTTLES_FILE = BOTTLES_DIR / "bottles.json"
 COLOUR  = "\033[95m"
