@@ -206,8 +206,9 @@ def list_bottles(bottles, bottle_type):
         if len(bottle.name) > longest_name:
             longest_name = len(bottle.name)
     space = " " * (longest_name - 3)
-    print("    " + "Bottle" + space + "Open Date")
-    print("   " + "-" * (longest_name + 2) + "|" + "-" * 12)
+    index_space = " " *len(str(len(bottles)))
+    print("   " + index_space + "Bottle" + space + "Open Date")
+    print("  "  + index_space + "-" * (longest_name + 2) + "|" + "-" * 12)
     for i in range(len(bottles)):
         bottle = bottles[i]
         if bottle_type == "opened" and not bottle.opened:
